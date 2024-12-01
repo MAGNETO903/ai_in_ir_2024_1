@@ -1,0 +1,480 @@
+# Краткое описание API для Mineflayer бота
+
+## Основные методы управления ботом:
+
+- **bot.chat(message)**
+  - Отправляет сообщение в чат.
+
+- **bot.setControlState(control, state)**
+  - Устанавливает состояние управления ботом (например, ходьба, прыжок).
+  - Параметры:
+    - `control`: `"forward"`, `"back"`, `"left"`, `"right"`, `"jump"`, `"sprint"`, `"sneak"`.
+    - `state`: `true` или `false`.
+
+- **bot.lookAt(targetPosition, force, callback)**
+  - Поворачивает голову бота к указанной позиции.
+
+- **bot.attack(entity, swingArm)**
+  - Атакует сущность.
+
+## Методы инвентаря и предметов:
+
+- **bot.inventory**
+  - Возвращает текущий инвентарь бота.
+
+- **bot.equip(item, destination, callback)**
+  - Экипирует/использует предмет.
+  - `destination`: `"hand"`, `"head"`, `"torso"`, `"legs"`, `"feet"`, `"off-hand"`.
+
+- **bot.toss(itemType, metadata, count, callback)**
+  - Выбрасывает предметы из инвентаря.
+
+- **bot.craft(recipe, count, craftingTable, callback)**
+  - Создает предметы по рецепту.
+
+## Методы взаимодействия с миром:
+
+- **bot.dig(block, force, callback)**
+  - Добывает указанный блок.
+
+- **bot.placeBlock(referenceBlock, faceVector, callback)**
+  - Размещает блок рядом с указанным блоком.
+
+- **bot.activateBlock(block, callback)**
+  - Активирует блок (например, открывает дверь).
+
+- **bot.move.to(desiredPoint)**
+  - Перемещает бота к заданной точке.
+
+## Методы взаимодействия с сущностями:
+
+- **bot.nearestEntity(filter)**
+  - Возвращает ближайшую сущность, соответствующую фильтру.
+
+- **bot.look(entity, force, callback)**
+  - Поворачивает голову к сущности.
+
+- **bot.mount(entity)**
+  - Садится на сущность (например, на лошадь).
+
+- **bot.dismount()**
+  - Слезает с сущности.
+
+## События:
+
+- **bot.on('chat', (username, message) => {})**
+  - Срабатывает при получении сообщения в чате.
+
+- **bot.on('spawn', () => {})**
+  - Срабатывает, когда бот появляется в мире.
+
+- **bot.on('death', () => {})**
+  - Срабатывает, когда бот умирает.
+
+## Информация о боте:
+
+- **bot.health**
+  - Текущее здоровье бота.
+
+- **bot.food**
+  - Уровень голода бота.
+
+- **bot.entity**
+  - Представление бота как сущности.
+
+- **bot.username**
+  - Имя бота.
+
+- **bot.players**
+  - Объект, содержащий всех игроков на сервере.
+
+---
+
+# Основные блоки (названия):
+
+- **Деревья и древесина:**
+  - `"oak_log"`, `"spruce_log"`, `"birch_log"`, `"jungle_log"`, `"acacia_log"`, `"dark_oak_log"`, `"mangrove_log"`.
+  - `"oak_planks"`, `"spruce_planks"`, `"birch_planks"`, `"jungle_planks"`, `"acacia_planks"`, `"dark_oak_planks"`.
+
+- **Руды:**
+  - `"coal_ore"`, `"iron_ore"`, `"gold_ore"`, `"diamond_ore"`, `"emerald_ore"`, `"redstone_ore"`, `"lapis_ore"`.
+
+- **Инструменты и предметы:**
+  - `"crafting_table"`, `"furnace"`, `"chest"`, `"stick"`.
+
+---
+
+# Основные классы и методы из mineflayer-pathfinder:
+
+- **pathfinder**
+  - Главный объект плагина для навигации бота.
+
+- **Movements**
+  - Класс, определяющий стратегию движения бота.
+  - Использование:
+    ```javascript
+    const movements = new Movements(bot, bot.registry);
+    bot.pathfinder.setMovements(movements);
+    ```
+
+- **Goals**
+  - Классы для определения целей навигации бота.
+  - **GoalBlock(x, y, z)**
+    - Движение к определенной точке.
+  - **GoalNear(x, y, z, range)**
+    - Движение в область рядом с точкой.
+  - **GoalFollow(entity, range)**
+    - Следование за сущностью.
+
+- **bot.pathfinder.goto(goal)**
+  - Асинхронно перемещает бота к заданной цели.
+
+- **Пример использования:**
+  ```javascript
+  const { GoalBlock } = require('mineflayer-pathfinder').goals;
+  await bot.pathfinder.goto(new GoalBlock(100, 64, 100));
+
+
+USEFUL FUNCTIONS
+// Базовые функции для Minecraft бота
+async function moveTo(bot, x, y, z) {
+    const mcData = require('minecraft-data')(bot.version);
+    const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
+    const { GoalBlock } = goals;
+
+    // Ensure the plugin is loaded
+    bot.loadPlugin(pathfinder);
+
+    const defaultMove = new Movements(bot, mcData);
+    bot.pathfinder.setMovements(defaultMove);
+    const goal = new GoalBlock(x, y, z);
+
+    return new Promise((resolve, reject) => {
+        bot.pathfinder.setGoal(goal, false);
+        bot.once('goal_reached', resolve);
+        bot.once('path_update', (results) => {
+            if (results.status === 'noPath') reject('Path not found');
+        });
+    });
+}
+
+// Функция для перемещения бота к заданным координатам с указанным радиусом
+async function moveNear(bot, x, y, z, radius = 2) {
+    const mcData = require('minecraft-data')(bot.version);
+    const defaultMove = new Movements(bot, mcData);
+
+    // Настройка Movements без возможности копания
+    defaultMove.allowSprinting = true;
+    defaultMove.allowSwimming = true;
+    defaultMove.canDig = false; // Отключаем возможность копания
+
+    bot.pathfinder.setMovements(defaultMove);
+    const goal = new GoalNear(x, y, z, radius);
+
+    return new Promise((resolve, reject) => {
+        bot.pathfinder.setGoal(goal, false);
+        bot.once('goal_reached', resolve);
+        bot.once('path_update', (results) => {
+            if (results.status === 'noPath') reject('Path not found');
+        });
+    });
+}
+
+async function collectItem(bot, itemName) {
+    const { Vec3 } = require('vec3');
+    const mcData = require('minecraft-data')(bot.version);
+
+    return new Promise((resolve, reject) => {
+        const items = Object.values(bot.entities).filter(
+            (entity) => entity.name === itemName && entity.objectType === 'Item'
+        );
+
+        if (items.length === 0) return reject(`No ${itemName} found nearby`);
+
+        const item = items[0]; // Get the nearest item
+        const goal = new bot.pathfinder.goals.GoalNear(
+            item.position.x,
+            item.position.y,
+            item.position.z,
+            1
+        );
+
+        bot.pathfinder.setGoal(goal);
+        bot.once('goal_reached', () => {
+            resolve(`Collected ${itemName}`);
+        });
+    });
+}
+
+async function attackEntity(bot, entityName) {
+    // Найти и атаковать сущность
+    const entity = Object.values(bot.entities).find((e) => e.name === entityName);
+
+    if (!entity) {
+        throw new Error(`Entity ${entityName} not found`);
+    }
+
+    bot.attack(entity);
+}
+
+async function equipItem(bot, itemName, slot = 'hand') {
+    // Экипировать предмет
+    const item = bot.inventory.items().find((i) => i.name === itemName);
+
+    if (!item) {
+        throw new Error(`Item ${itemName} not found in inventory`);
+    }
+
+    await bot.equip(item, slot);
+}
+
+async function digBlock(bot, blockName) {
+    const { Vec3 } = require('vec3');
+
+    // Определяем позицию блока под ботом
+    const belowPosition = bot.entity.position.offset(0, -1, 0);
+    const blockBelow = bot.blockAt(belowPosition);
+
+    // Проверяем, является ли целевой блок тем, который бот пытается копать
+    const targetBlock = bot.findBlock({
+        matching: (block) => block.name === blockName,
+        maxDistance: 64,
+    });
+
+    if (!targetBlock) {
+        throw new Error(`Block "${blockName}" not found within range.`);
+    }
+
+    // Проверяем, не копает ли бот блок непосредственно под собой
+    if (targetBlock.position.equals(belowPosition)) {
+        console.log(`Бот пытается копать блок под собой. Предотвращение падения.`);
+
+        // Если бот копает блок под собой, сначала попытайтесь разместить блок перед копанием
+        const safePosition = bot.entity.position.offset(0, 1, 0); // Позиция перед ботом
+        const referenceBlock = bot.blockAt(safePosition.offset(0, -1, 0));
+
+        if (referenceBlock && referenceBlock.name !== 'air') {
+            try {
+                await moveTo(bot, referenceBlock.position.x, referenceBlock.position.y, referenceBlock.position.z);
+                await placeBlock(bot, referenceBlock, "oak_planks", new Vec3(0, 1, 0));
+                console.log(`Размещен блок перед копанием, чтобы предотвратить падение.`);
+            } catch (err) {
+                console.error(`Не удалось разместить блок перед копанием: ${err.message}`);
+                throw err;
+            }
+        } else {
+            console.warn(`Не удалось найти подходящий referenceBlock для размещения.`);
+        }
+    }
+
+    // Теперь приступаем к копанию блока
+    try {
+        await moveTo(bot, targetBlock.position.x, targetBlock.position.y, targetBlock.position.z);
+        await bot.dig(targetBlock);
+        console.log(`Успешно выкопал блок "${blockName}" по позиции ${targetBlock.position}.`);
+    } catch (digError) {
+        throw new Error(`Failed to dig block "${blockName}": ${digError.message}`);
+    }
+}
+
+
+const { Vec3 } = require('vec3');
+
+async function placeBlock(bot, name, position) {
+    // Сброс счетчика неудачных попыток
+    _placeBlockFailCount = 0;
+
+    // Проверка входных параметров
+    if (typeof name !== "string") {
+        throw new Error(`name for placeBlock must be a string`);
+    }
+    if (!(position instanceof Vec3)) {
+        throw new Error(`position for placeBlock must be a Vec3`);
+    }
+
+    // Округление позиции до целых чисел
+    const targetPos = position.floored();
+
+    // Получение данных о предметах
+    const mcData = mcDataModule(bot.version);
+    const itemByName = mcData.itemsByName[name];
+
+    if (!itemByName) {
+        throw new Error(`No item named ${name}`);
+    }
+
+    // Поиск предмета в инвентаре
+    const item = bot.inventory.findInventoryItem(itemByName.id);
+    if (!item) {
+        bot.chat(`No ${name} in inventory`);
+        return;
+    }
+
+    const item_count = item.count;
+
+    // Проверка, что целевая позиция свободна
+    const targetBlockCheck = bot.blockAt(targetPos);
+    if (targetBlockCheck && targetBlockCheck.name !== 'air') {
+        bot.chat(`Target position ${targetPos} is already occupied by ${targetBlockCheck.name}. Skipping.`);
+        return;
+    }
+
+    // Проверка, находится ли бот на целевой позиции
+    const botPosFloored = bot.entity.position.floored();
+    if (botPosFloored.equals(targetPos)) {
+        bot.chat(`Bot is standing on the target position ${targetPos}. Attempting to move out of the way.`);
+        // Попытка переместиться на соседний блок
+
+        // Возможные направления для перемещения
+        const moveDirections = [
+            new Vec3(1, 0, 0),
+            new Vec3(-1, 0, 0),
+            new Vec3(0, 0, 1),
+            new Vec3(0, 0, -1),
+            new Vec3(1, 0, 1),
+            new Vec3(-1, 0, -1),
+            new Vec3(1, 0, -1),
+            new Vec3(-1, 0, 1),
+        ];
+
+        let moved = false;
+        for (const dir of moveDirections) {
+            const newPos = botPosFloored.plus(dir);
+            const blockBelow = bot.blockAt(newPos.offset(0, -1, 0));
+            const blockAtPos = bot.blockAt(newPos);
+            const blockAbove = bot.blockAt(newPos.offset(0, 1, 0));
+
+            // Проверяем, что блок под ногами твердый, и место свободно
+            if (blockBelow && blockBelow.boundingBox === 'block' &&
+                (!blockAtPos || blockAtPos.name === 'air') &&
+                (!blockAbove || blockAbove.name === 'air')) {
+                try {
+                    await moveTo(bot, newPos.x, newPos.y, newPos.z);
+                    bot.chat(`Moved to ${newPos} to clear the target position.`);
+                    moved = true;
+                    break;
+                } catch (err) {
+                    console.error(`Failed to move to ${newPos}: ${err.message}`);
+                    continue;
+                }
+            }
+        }
+
+        if (!moved) {
+            bot.chat(`Unable to find a suitable position to move. Cannot place the block.`);
+            return;
+        }
+    }
+
+    // Поиск опорного блока вокруг целевой позиции
+    const faceVectors = [
+        new Vec3(0, -1, 0),  // Снизу
+        new Vec3(1, 0, 0),   // Справа
+        new Vec3(-1, 0, 0),  // Слева
+        new Vec3(0, 0, 1),   // Спереди
+        new Vec3(0, 0, -1),  // Сзади
+    ];
+
+    let referenceBlock = null;
+    let faceVector = null;
+
+    for (const vector of faceVectors) {
+        const blockPos = targetPos.minus(vector);
+        const block = bot.blockAt(blockPos);
+        if (block && block.name !== "air" && block.boundingBox === 'block') {
+            referenceBlock = block;
+            faceVector = vector;
+            console.log(`Placing ${name} on ${block.name} at ${block.position}`);
+            break;
+        }
+    }
+
+    if (!referenceBlock) {
+        bot.chat(`No block to place ${name} on at ${targetPos}. Cannot place a floating block.`);
+        _placeBlockFailCount++;
+        if (_placeBlockFailCount > 10) {
+            throw new Error(`placeBlock failed too many times. Cannot place a floating block.`);
+        }
+        return;
+    }
+
+    // Попытка разместить блок с обработкой ошибок
+    try {
+        // Перемещение к опорному блоку (на расстояние 2 блока)
+        const goal = new GoalNear(referenceBlock.position.x, referenceBlock.position.y, referenceBlock.position.z, 2);
+        bot.pathfinder.setGoal(goal, false);
+        await new Promise((resolve, reject) => {
+            bot.once('goal_reached', () => {
+                console.log(`Goal reached: Within 2 blocks of (${referenceBlock.position.x}, ${referenceBlock.position.y}, ${referenceBlock.position.z})`);
+                resolve();
+            });
+            bot.once('path_update', (results) => {
+                if (results.status === 'noPath') reject('Path not found');
+            });
+        });
+
+        // Поворот к блоку
+        await bot.lookAt(referenceBlock.position.offset(0.5, 0.5, 0.5));
+
+        // Экипировка предмета
+        await bot.equip(item, "hand");
+        console.log(`Equipped item "${name}".`);
+
+        // Размещение блока
+        await bot.placeBlock(referenceBlock, faceVector);
+        bot.chat(`Placed ${name} at ${targetPos}`);
+        _placeBlockFailCount = 0; // Сброс счетчика неудачных попыток
+
+        // Сохранение состояния, если метод bot.save определен
+        if (typeof bot.save === 'function') {
+            await bot.save(`${name}_placed`);
+        }
+
+    } catch (err) {
+        console.error(`Error placing ${name} at ${targetPos}: ${err.message}`);
+
+        // Проверка, изменился ли счетчик предметов (предмет был размещен)
+        const placedItem = bot.inventory.findInventoryItem(itemByName.id);
+        if (placedItem && placedItem.count === item_count) {
+            bot.chat(`Error placing ${name}: ${err.message}, please find another position to place`);
+            _placeBlockFailCount++;
+            if (_placeBlockFailCount > 10) {
+                throw new Error(`placeBlock failed too many times, please find another position to place.`);
+            }
+        } else {
+            bot.chat(`Placed ${name}`);
+            _placeBlockFailCount = 0; // Сброс счетчика при успешном размещении
+            if (typeof bot.save === 'function') {
+                await bot.save(`${name}_placed`);
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+async function chat(bot, message) {
+    // Отправить сообщение в чат
+    bot.chat(message);
+}
+
+async function findEntity(bot, entityName) {
+    // Найти ближайшую сущность
+    const entity = Object.values(bot.entities).find((e) => e.name === entityName);
+
+    if (!entity) {
+        throw new Error(`Entity ${entityName} not found`);
+    }
+
+    return entity;
+}
+
+
+
+also u can check full documentation on the website via this link
+https://github.com/PrismarineJS/mineflayer/blob/master/docs/api.md

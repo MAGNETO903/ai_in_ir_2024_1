@@ -1,0 +1,5 @@
+g4f==0.3.3.0
+vec3
+fastapi 
+uvicorn 
+pydantic

@@ -1,0 +1,49 @@
+EXAMPLE 1
+USER's INTRUSCTION
+"Say something"
+LLM's response
+async function botProgram(bot) {
+    await bot.chat("say something");
+}
+
+EXAMPLE 2
+USER's INTRUSCTION
+"Place a block near u"
+LLM's response
+async function botProgram(bot) {
+    const position = bot.entity.position;
+    const targetPosition = position.offset(1, 0, 0);
+
+    try {
+        await moveNear(bot, position.x, position.y, position.z, 2);
+        await equipItem(bot, "oak_planks", "hand");
+        await placeBlock(bot, "oak_planks", targetPosition);
+    } catch (error) {
+        bot.chat(`Error: ${error.message}`);
+    }
+} botProgram(bot);
+
+
+EXAMPLE 3
+USER's INTRUSCTION
+"Keep following player"
+LLM's response
+async function botProgram(bot) {
+    const player = bot.nearestEntity(entity => entity.type === 'player');
+
+    if (!player) {
+        bot.chat("No players nearby to follow.");
+        return;
+    }
+
+    while (true) {
+        try {
+            await moveNear(bot, player.position.x, player.position.y, player.position.z, 2);
+            bot.lookAt(player.position);
+        } catch (error) {
+            console.error(error);
+            bot.chat("Encountered an issue while trying to follow the player.");
+            break;
+        }
+    }
+}
